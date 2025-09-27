@@ -1,0 +1,70 @@
+{
+    "modules": [
+        {
+            "id": 1,
+            "name": "Compute",
+            "question": "Which Compute service do you prefer?",
+            "options": [
+                {
+                    "id": "c1",
+                    "text": "Azure VMs",
+                    "votes": 5
+                },
+                {
+                    "id": "c2",
+                    "text": "App Service",
+                    "votes": 4
+                },
+                {
+                    "id": "c3",
+                    "text": "Functions",
+                    "votes": 2
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "name": "Storage",
+            "question": "Which Storage option do you use most?",
+            "options": [
+                {
+                    "id": "s1",
+                    "text": "Blob Storage",
+                    "votes": 7
+                },
+                {
+                    "id": "s2",
+                    "text": "File Storage",
+                    "votes": 1
+                },
+                {
+                    "id": "s3",
+                    "text": "Queue Storage",
+                    "votes": 0
+                }
+            ]
+        },
+        {
+            "id": 3,
+            "name": "Networking",
+            "question": "Favourite Networking Feature?",
+            "options": [
+                {
+                    "id": "s1",
+                    "text": "VNet",
+                    "votes": 6
+                },
+                {
+                    "id": "s2",
+                    "text": "Load Balancer",
+                    "votes": 1
+                },
+                {
+                    "id": "s3",
+                    "text": "Front Door",
+                    "votes": 0
+                }
+            ]
+        }
+    ]
+}
