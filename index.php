@@ -1,147 +1,110 @@
 <?php
-// index.php
-$dataFile = __DIR__ . '/data.json';
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-// If first run and no JSON, create sample
-if (!file_exists($dataFile)) {
-    $default = [
-        "modules" => [
-            ["id"=>1,"name"=>"Compute","question"=>"Which Compute service do you prefer?","options"=>[
-                ["id"=>"c1","text"=>"Azure VMs","votes"=>5],
-                ["id"=>"c2","text"=>"App Service","votes"=>3],
-                ["id"=>"c3","text"=>"Functions","votes"=>2]
-            ]],
-            ["id"=>2,"name"=>"Storage","question"=>"Which Storage option do you use most?","options"=>[
-                ["id"=>"s1","text"=>"Blob Storage","votes"=>6],
-                ["id"=>"s2","text"=>"File Storage","votes"=>1],
-                ["id"=>"s3","text"=>"Queue Storage","votes"=>0]
-            ]],
-            ["id"=>3,"name"=>"Networking","question"=>"Favorite Networking feature?","options"=>[
-                ["id"=>"n1","text"=>"VNet","votes"=>4],
-                ["id"=>"n2","text"=>"Load Balancer","votes"=>2],
-                ["id"=>"n3","text"=>"Front Door","votes"=>1]
-            ]]
-        ]
-    ];
-    file_put_contents($dataFile, json_encode($default, JSON_PRETTY_PRINT));
-}
-
+$dataFile = __DIR__ . "/data.json";
 $data = json_decode(file_get_contents($dataFile), true);
-if (!$data) $data = ["modules"=>[]];
-
-// helper to escape
-function h($str){return htmlspecialchars($str,ENT_QUOTES);}
 ?>
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Azure Polls</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<meta charset="UTF-8">
+<title>Azure Poll App</title>
 <style>
-body{font-family:sans-serif;background:#f3f4f6;padding:20px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
-.card{background:#fff;padding:14px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);cursor:pointer;display:flex;flex-direction:column;gap:8px;min-height:220px}
-.card .title{font-weight:600}
-.card .question{font-size:.95rem;color:#666}
-.chart-wrap{flex:1;display:flex;justify-content:center;align-items:center}
-.btn{background:#2563eb;color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
-.footer{display:flex;justify-content:space-between;align-items:center;font-size:.9rem;color:#333}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:50}
-.modal{background:#fff;padding:18px;border-radius:10px;width:100%;max-width:480px;box-shadow:0 8px 30px rgba(0,0,0,.3)}
-.option{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #e5e7eb;border-radius:6px;margin-top:6px}
-.close{float:right;font-size:20px;background:none;border:none;cursor:pointer}
+body {font-family: Arial, sans-serif; background:#f4f4f4; padding:20px;}
+h1 {text-align:center;}
+.grid {display:grid; grid-template-columns: repeat(3, 1fr); gap:20px;}
+.card {background:white;padding:15px;border-radius:10px;text-align:center;
+       box-shadow:0 2px 6px rgba(0,0,0,0.1);}
+button {margin-top:10px;padding:8px 16px;cursor:pointer;}
+.modal {display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+        background:rgba(0,0,0,0.5);}
+.modal-content {background:white;margin:10% auto;padding:20px;border-radius:8px;width:300px;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-<h1>Azure Module Polls</h1>
-<div class="grid" id="cards"></div>
 
-<!-- Modal -->
-<div class="modal-bg" id="modalBg">
-  <div class="modal">
-    <button class="close" id="closeModal">&times;</button>
-    <h2 id="modalTitle"></h2>
-    <p id="modalQ" style="color:#666"></p>
+<h1>Azure Poll App</h1>
+<div class="grid" id="pollGrid"></div>
+
+<div class="modal" id="pollModal">
+  <div class="modal-content">
+    <h3 id="pollTitle"></h3>
     <div id="options"></div>
-    <div style="margin-top:12px;text-align:right">
-      <button class="btn" id="voteBtn">Vote</button>
-    </div>
+    <button onclick="closeModal()">Close</button>
   </div>
 </div>
 
 <script>
-const data = <?php echo json_encode($data); ?>;
-const cards = document.getElementById('cards');
-const modalBg = document.getElementById('modalBg');
-const modalTitle = document.getElementById('modalTitle');
-const modalQ = document.getElementById('modalQ');
-const optionsDiv = document.getElementById('options');
-const voteBtn = document.getElementById('voteBtn');
-const closeModal = document.getElementById('closeModal');
-let activeModule = null;
-const charts = {};
+const modules = <?php echo json_encode($data['modules']); ?>;
+const grid = document.getElementById('pollGrid');
+let currentModule = null;
+let charts = {};
 
-function totalVotes(m){return m.options.reduce((s,o)=>s+(o.votes||0),0);}
-
-function renderCards(){
-  cards.innerHTML='';
-  data.modules.forEach(m=>{
-    const card=document.createElement('div');
-    card.className='card';
-    card.innerHTML=`<div class="title">${m.name}</div>
-      <div class="question">${m.question}</div>
-      <div class="chart-wrap"><canvas id="ch-${m.id}" width="200" height="120"></canvas></div>
-      <div class="footer"><div>Total: ${totalVotes(m)}</div><button class="btn">Poll</button></div>`;
-    card.querySelector('.btn').onclick=e=>openModal(m);
-    card.onclick=e=>{if(e.target.tagName!=='BUTTON')openModal(m);};
-    cards.appendChild(card);
-    drawChart(m);
+function renderGrid() {
+  grid.innerHTML = "";
+  modules.forEach(mod => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <h3>${mod.name}</h3>
+      <canvas id="chart${mod.id}" width="200" height="200"></canvas><br>
+      <button onclick="openModal(${mod.id})">Poll</button>
+    `;
+    grid.appendChild(card);
+    setTimeout(()=>drawChart(mod), 0); // draw after DOM append
   });
 }
-function drawChart(m){
-  const ctx=document.getElementById('ch-'+m.id).getContext('2d');
-  const labels=m.options.map(o=>o.text);
-  const votes=m.options.map(o=>o.votes);
-  if(charts[m.id]){charts[m.id].data.datasets[0].data=votes;charts[m.id].update();return;}
-  charts[m.id]=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data:votes}]},options:{plugins:{legend:{display:false}},maintainAspectRatio:false}});
-}
 
-function openModal(m){
-  activeModule=m;
-  modalTitle.textContent=m.name;
-  modalQ.textContent=m.question;
-  optionsDiv.innerHTML='';
-  m.options.forEach(o=>{
-    const opt=document.createElement('label');
-    opt.className='option';
-    opt.innerHTML=`<input type="radio" name="pollOpt" value="${o.id}"> ${o.text} (${o.votes})`;
-    optionsDiv.appendChild(opt);
+function drawChart(mod){
+  const ctx = document.getElementById(`chart${mod.id}`);
+  const labels = mod.options.map(o=>o.text);
+  const votes = mod.options.map(o=>o.votes);
+  if(charts[mod.id]) charts[mod.id].destroy();
+  charts[mod.id] = new Chart(ctx, {
+    type:'bar',
+    data:{ labels:labels, datasets:[{ label:'Votes', data:votes }]},
+    options:{ scales:{ y:{ beginAtZero:true, precision:0 } } }
   });
-  modalBg.style.display='flex';
 }
-function closeModalFn(){modalBg.style.display='none';activeModule=null;}
-closeModal.onclick=closeModalFn;
-modalBg.onclick=e=>{if(e.target===modalBg)closeModalFn();};
 
-voteBtn.onclick=async()=>{
-  if(!activeModule)return;
-  const sel=document.querySelector('input[name="pollOpt"]:checked');
-  if(!sel){alert("Select an option");return;}
-  const fd=new FormData();
-  fd.append('moduleId',activeModule.id);
-  fd.append('optionId',sel.value);
-  const r=await fetch('vote.php',{method:'POST',body:fd});
-  const j=await r.json();
-  if(!j.success){alert(j.message);return;}
-  // update local data & refresh
-  data.modules=j.data.modules;
-  renderCards();
-  closeModalFn();
-};
+function openModal(id){
+  currentModule = modules.find(m=>m.id===id);
+  document.getElementById('pollTitle').innerText = currentModule.question;
+  const optDiv = document.getElementById('options');
+  optDiv.innerHTML = currentModule.options.map(o =>
+    `<button onclick="vote('${o.id}')">${o.text}</button>`
+  ).join('<br>');
+  document.getElementById('pollModal').style.display='block';
+}
 
-renderCards();
+function closeModal(){ document.getElementById('pollModal').style.display='none'; }
+
+function vote(optionId){
+  const votedKey = `voted_${currentModule.id}`;
+  if(localStorage.getItem(votedKey)){
+    alert("You already voted for this module.");
+    return;
+  }
+  fetch('vote.php', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({moduleId:currentModule.id, optionId:optionId})
+  })
+  .then(r=>r.json())
+  .then(updated=>{
+    localStorage.setItem(votedKey,'true');
+    // Update local data & redraw chart
+    const modIndex = modules.findIndex(m=>m.id===updated.id);
+    modules[modIndex] = updated;
+    drawChart(updated);
+    closeModal();
+  })
+  .catch(err=>console.error(err));
+}
+
+renderGrid();
 </script>
 </body>
 </html>
