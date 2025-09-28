@@ -50,17 +50,17 @@
             "question": "Favourite Networking Feature?",
             "options": [
                 {
-                    "id": "s1",
+                    "id": "n1",
                     "text": "VNet",
                     "votes": 6
                 },
                 {
-                    "id": "s2",
+                    "id": "n2",
                     "text": "Load Balancer",
                     "votes": 1
                 },
                 {
-                    "id": "s3",
+                    "id": "n3",
                     "text": "Front Door",
                     "votes": 0
                 }
