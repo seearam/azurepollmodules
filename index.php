@@ -61,11 +61,24 @@ function drawChart(mod){
   const ctx = document.getElementById(`chart${mod.id}`);
   const labels = mod.options.map(o=>o.text);
   const votes = mod.options.map(o=>o.votes);
+  const colors = ["#36A2EB","#FF6384","#FFCE56","#4BC0C0","#9966FF","#FF9F40"];
   if(charts[mod.id]) charts[mod.id].destroy();
   charts[mod.id] = new Chart(ctx, {
-    type:'bar',
-    data:{ labels:labels, datasets:[{ label:'Votes', data:votes }]},
-    options:{ scales:{ y:{ beginAtZero:true, precision:0 } } }
+    type:'doughnut',
+    data:{ 
+      labels:labels,
+      datasets:[{ 
+        label:'Votes',
+        data:votes,
+        backgroundColor: colors.slice(0, labels.length),
+        borderWidth:1
+      }]
+    },
+    options:{
+      plugins:{
+        legend:{ position:'bottom' }
+      }
+    }
   });
 }
 
@@ -95,7 +108,6 @@ function vote(optionId){
   .then(r=>r.json())
   .then(updated=>{
     localStorage.setItem(votedKey,'true');
-    // Update local data & redraw chart
     const modIndex = modules.findIndex(m=>m.id===updated.id);
     modules[modIndex] = updated;
     drawChart(updated);
